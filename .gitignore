@@ -1,3 +1,2 @@
-./libs/data
-gitignore
-./gitignore
+libs/data/
+.gitignore
