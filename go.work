@@ -1,0 +1,9 @@
+go 1.22.12
+
+use (
+	./services/api-gateway
+	./services/uploader
+	./services/metadata
+	./services/transcoder
+	./services/playback
+)
