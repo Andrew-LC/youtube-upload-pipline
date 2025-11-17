@@ -1,3 +1,5 @@
 module github.com/Andrew-LC/uploader
 
-go 1.22.12
+go 1.24.0
+
+require github.com/google/uuid v1.6.0
