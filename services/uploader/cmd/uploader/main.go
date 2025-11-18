@@ -1,55 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-
 	"log"
-	"github.com/minio/minio-go/v7"
-	"github.com/google/uuid"
+	"net/http"
 	"github.com/Andrew-LC/storage"
+	"github.com/Andrew-LC/uploader/internal"
 )
 
-func newUploadHandler(store *minio.Client) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        r.Body = http.MaxBytesReader(w, r.Body, 100<<20) 
 
-        err := r.ParseMultipartForm(300 << 20)
-        if err != nil {
-            w.WriteHeader(http.StatusBadRequest)
-            fmt.Fprintln(w, "Invalid upload:", err)
-            return
-        }
-
-        file, header, err := r.FormFile("video")
-        if err != nil {
-            w.WriteHeader(http.StatusBadRequest)
-            fmt.Fprintln(w, "Missing 'video' file:", err)
-            return
-        }
-        defer file.Close()
-
-        // Generate unique video ID
-        videoID := uuid.New().String()
-        objectName := videoID + "-" + header.Filename
-
-        // Upload to MinIO
-        err = storage.UploadStream(store, "raw-videos", objectName, file, header.Size)
-        if err != nil {
-            w.WriteHeader(http.StatusInternalServerError)
-            fmt.Fprintln(w, "Failed to store file:", err)
-            return
-        }
-
-        fmt.Fprintf(w, "Uploaded successfully as %s\n", objectName)
-    }
-}
 
 func main() {
-    storeClient := storage.NewClient()
+    minoClient := storage.NewClient()
 
     mux := http.NewServeMux()
-    mux.HandleFunc("POST /upload", newUploadHandler(storeClient))
+    mux.HandleFunc("POST /upload", internal.UploadHandler(minoClient))
 
     log.Println("Uploader running on :8080")
     http.ListenAndServe(":8080", mux)

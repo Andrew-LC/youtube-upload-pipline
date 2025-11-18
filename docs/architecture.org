@@ -1,0 +1,44 @@
+* Project Architecture
+
+#+begin_src mermaid :file architecture.png
+ flowchart LR 
+
+    %% Client Layer
+    A[Client<br/>Mobile/Web] -->|HTTP Upload| B
+
+    %% Uploader Service
+    subgraph Uploader Service
+        B[Uploader API<br/>HTTP] --> C[(MinIO)]
+        B -->|Publish Event<br/>video.uploaded| D
+    end
+
+    %% Message Broker
+    subgraph RabbitMQ
+        D[(Exchange/Queue<br/>video.uploaded)]
+        E[(Exchange/Queue<br/>video.processed)]
+    end
+
+    %% Transcoder Service
+    subgraph Transcoder Service
+        F[Worker<br/>AMQP Consumer] --> C
+        F --> G[FFmpeg Engine]
+        G --> C
+        F -->|Publish Event<br/>video.processed| E
+    end
+
+    %% Metadata Service
+    subgraph Metadata Service
+        H[AMQP Consumer] --> E
+        H --> I[(Postgres)]
+        J[Metadata API<br/>gRPC] --> I
+    end
+
+    %% API Gateway
+    subgraph API Gateway
+        K[REST API] -->|gRPC| J
+        K -->|Signed URL<br/>HTTP Redirect| C
+    end
+
+    %% Client Playback
+    K -->|JSON Response<br/>Playback Info| A
+#+end_src
