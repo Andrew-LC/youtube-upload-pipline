@@ -42,3 +42,6 @@
     %% Client Playback
     K -->|JSON Response<br/>Playback Info| A
 #+end_src
+
+#+RESULTS:
+[[file:architecture.png]]
