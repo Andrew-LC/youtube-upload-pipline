@@ -8,6 +8,7 @@ import (
 	"github.com/Andrew-LC/uploader/internal/api"
 	"github.com/Andrew-LC/uploader/internal/app"
 	"github.com/Andrew-LC/uploader/internal/repository"
+	"github.com/Andrew-LC/libs/mq"
 )
 
 const (
@@ -16,6 +17,7 @@ const (
 	minioSecretKey = "MINIO_SECRET_KEY"
 	minioBucket = "MINIO_BUCKET_NAME"
 	servicePort = "SERVICE_PORT"
+	mqURI = "MQ_URI"
 )
 
 func main() {
@@ -24,12 +26,14 @@ func main() {
 	os.Setenv(minioSecretKey, "minioadmin")
 	os.Setenv(minioBucket, "uploads")
 	os.Setenv(servicePort, "8080")
+	os.Setenv(mqURI, "amqp://guest:guest@localhost:5672/")
 	
 	endpoint := os.Getenv(minioEndpoint)
 	accessKey := os.Getenv(minioAccessKey)
 	secretKey := os.Getenv(minioSecretKey)
 	bucketName := os.Getenv(minioBucket)
 	port := os.Getenv(servicePort)
+	mqUri := os.Getenv(mqURI)
 
 	if endpoint == "" || accessKey == "" || secretKey == "" || bucketName == "" {
 		log.Fatal("MinIO configuration environment variables (ENDPOINT, ACCESS_KEY, SECRET_KEY, BUCKET_NAME) must be set.")
@@ -37,6 +41,15 @@ func main() {
 	if port == "" {
 		port = "8080" 
 	}
+	if mqUri == "" {
+		log.Fatal("Rabbitmq configuration requires a dialup key")
+	}
+
+	rabbitMQ, err := mq.NewRabbitMQ(mqUri)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer rabbitMQ.Close()
 
 	repo, err := repository.NewMinIORepo(endpoint, accessKey, secretKey, bucketName)
 	if err != nil {
@@ -44,7 +57,7 @@ func main() {
 	}
 	log.Printf("Successfully connected to MinIO endpoint: %s", endpoint)
 
-	svc := app.NewUploadService(repo, bucketName)
+	svc := app.NewUploadService(repo, bucketName, rabbitMQ)
 
 	handler := api.NewHandler(svc)
 

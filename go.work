@@ -7,6 +7,6 @@ use (
 	./services/transcoder
 	./services/playback
 
-
 	./libs/storage
+	./libs/mq
 )
