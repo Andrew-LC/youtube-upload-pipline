@@ -1,59 +1,64 @@
 package storage
 
 import (
-	"log"
-	"io"
 	"context"
+	"fmt"
+	"io"
+	"time"
+
+	"github.com/Andrew-LC/libs/models"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-type MinoClient struct {
-	client *minio.Client
-	ctx context.Context 
+type MinIORepo struct {
+	Client *minio.Client
+	Bucket string
 }
 
-func NewClient() *MinoClient {
-	client, err := minio.New("localhost:9000", &minio.Options{
-		Creds:  credentials.NewStaticV4("minioadmin", "minioadmin", ""),
-		Secure: false, // local → http
+func NewMinIORepo(endpoint, accessKey, secretKey, bucket string, secure bool) (*MinIORepo, error) {
+	minioClient, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: secure,
 	})
 	if err != nil {
-		log.Fatalf("failed to create MinIO client: %v", err)
+		return nil, fmt.Errorf("failed to create MinIO client: %w", err)
 	}
-	return &MinoClient{
-		client: client,
-		ctx: context.Background(),
-	} 
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	found, err := minioClient.BucketExists(ctx, bucket)
+	if err != nil {
+		return nil, fmt.Errorf("error checking bucket existence: %w", err)
+	}
+	if !found {
+		err = minioClient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create bucket: %w", err)
+		}
+	}
+
+	return &MinIORepo{
+		Client: minioClient,
+		Bucket: bucket,
+	}, nil
 }
 
-func (c *MinoClient) UploadStream(bucket, object string, r io.Reader, size int64) error {
-	_, err := c.client.PutObject(c.ctx, bucket, object, r, size, minio.PutObjectOptions{
-        ContentType: "video/mp4",
-    })
-    return err
-}
+func (r *MinIORepo) UploadFile(ctx context.Context, bucketName, objectName string, reader io.Reader, size int64, contentType string) (models.FileMetaData, error) {
+	info, err := r.Client.PutObject(ctx, bucketName, objectName, reader, size, minio.PutObjectOptions{
+		ContentType: contentType,
+	})
+	if err != nil {
+		return models.FileMetaData{}, fmt.Errorf("minio put object failed: %w", err)
+	}
 
-func (c *MinoClient) EnsureBucket(bucketName string) error {
-    exists, err := c.client.BucketExists(c.ctx, bucketName)
-    if err != nil {
-        return err
-    }
+	url := fmt.Sprintf("http://%s/%s/%s", r.Client.EndpointURL().Host, bucketName, info.Key)
 
-    if !exists {
-        return c.client.MakeBucket(c.ctx, bucketName, minio.MakeBucketOptions{})
-    }
-
-    return nil
-}
-
-func (c *MinoClient) UploadFile(bucket, filePath, objectName string) error {
-    _, err := c.client.FPutObject(
-	c.ctx,
-        bucket,
-        objectName,
-        filePath,
-        minio.PutObjectOptions{ContentType: "video/mp4"},
-    )
-    return err
+	return models.FileMetaData{
+		FileName: info.Key,
+		Bucket:   bucketName,
+		FileSize: info.Size,
+		URL:      url,
+	}, nil
 }

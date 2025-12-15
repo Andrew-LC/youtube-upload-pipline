@@ -9,4 +9,6 @@ use (
 
 	./libs/storage
 	./libs/mq
+	./libs/models
+	./libs/logger
 )

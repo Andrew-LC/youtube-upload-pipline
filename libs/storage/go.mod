@@ -1,4 +1,4 @@
-module github.com/Andrew-LC/storage
+module github.com/Andrew-LC/libs/storage
 
 go 1.24.0
 

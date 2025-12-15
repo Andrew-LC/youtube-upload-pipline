@@ -2,24 +2,29 @@ package api
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
+
+	"github.com/Andrew-LC/libs/logger"
 	"github.com/Andrew-LC/uploader/internal/app"
+	"go.uber.org/zap"
 )
 
 type Handler struct {
 	Service app.UploadService
+	logger  *logger.Logger
 }
 
-func NewHandler(svc app.UploadService) *Handler {
-	return &Handler{Service: svc}
+func NewHandler(svc app.UploadService, l *logger.Logger) *Handler {
+	return &Handler{Service: svc, logger: l}
 }
 
 func (h *Handler) UploadFileHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(4 << 30) 
+	zapLog := h.logger.GetZapLogger()
+	r.ParseMultipartForm(4 << 30)
 
-	file, header, err := r.FormFile("file") 
+	file, header, err := r.FormFile("file")
 	if err != nil {
+		zapLog.Error("Error retrieving file from form", zap.Error(err))
 		http.Error(w, "Error retrieving file from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -28,11 +33,11 @@ func (h *Handler) UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	metadata, err := h.Service.ProcessUpload(r.Context(), header.Filename, file, header.Size, header.Header.Get("Content-Type"))
 
 	if err != nil {
-		log.Printf("Upload failed: %v", err)
-        if err.Error() == "file size exceeds 4GB limit" {
-            http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
-            return
-        }
+		zapLog.Error("Upload failed", zap.Error(err))
+		if err.Error() == "file size exceeds 4GB limit" {
+			http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+			return
+		}
 		http.Error(w, "Internal error processing upload", http.StatusInternalServerError)
 		return
 	}

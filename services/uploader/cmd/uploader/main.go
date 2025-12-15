@@ -5,69 +5,77 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/Andrew-LC/libs/logger"
+	"github.com/Andrew-LC/libs/mq"
+	"github.com/Andrew-LC/libs/storage"
 	"github.com/Andrew-LC/uploader/internal/api"
 	"github.com/Andrew-LC/uploader/internal/app"
-	"github.com/Andrew-LC/uploader/internal/repository"
-	"github.com/Andrew-LC/libs/mq"
+	"go.uber.org/zap"
 )
 
 const (
-	minioEndpoint = "MINIO_ENDPOINT"
+	minioEndpoint  = "MINIO_ENDPOINT"
 	minioAccessKey = "MINIO_ACCESS_KEY"
 	minioSecretKey = "MINIO_SECRET_KEY"
-	minioBucket = "MINIO_BUCKET_NAME"
-	servicePort = "SERVICE_PORT"
-	mqURI = "MQ_URI"
+	minioBucket    = "MINIO_BUCKET_NAME"
+	servicePort    = "SERVICE_PORT"
+	mqURI          = "MQ_URI"
 )
 
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
 func main() {
-	os.Setenv(minioEndpoint, "localhost:9000")
-	os.Setenv(minioAccessKey, "minioadmin")
-	os.Setenv(minioSecretKey, "minioadmin")
-	os.Setenv(minioBucket, "uploads")
-	os.Setenv(servicePort, "8080")
-	os.Setenv(mqURI, "amqp://guest:guest@localhost:5672/")
-	
-	endpoint := os.Getenv(minioEndpoint)
-	accessKey := os.Getenv(minioAccessKey)
-	secretKey := os.Getenv(minioSecretKey)
-	bucketName := os.Getenv(minioBucket)
-	port := os.Getenv(servicePort)
-	mqUri := os.Getenv(mqURI)
+	l, err := logger.NewLogger("upload_log", true)
+	// Initialize Logger
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer l.Sync()
+	zapLog := l.GetZapLogger()
+
+	endpoint := getEnv(minioEndpoint, "localhost:9000")
+	accessKey := getEnv(minioAccessKey, "minioadmin")
+	secretKey := getEnv(minioSecretKey, "minioadmin")
+	bucketName := getEnv(minioBucket, "uploads")
+	port := getEnv(servicePort, "8080")
+	mqUri := getEnv(mqURI, "amqp://guest:guest@localhost:5672/")
 
 	if endpoint == "" || accessKey == "" || secretKey == "" || bucketName == "" {
-		log.Fatal("MinIO configuration environment variables (ENDPOINT, ACCESS_KEY, SECRET_KEY, BUCKET_NAME) must be set.")
-	}
-	if port == "" {
-		port = "8080" 
+		zapLog.Fatal("MinIO configuration environment variables (ENDPOINT, ACCESS_KEY, SECRET_KEY, BUCKET_NAME) must be set.")
 	}
 	if mqUri == "" {
-		log.Fatal("Rabbitmq configuration requires a dialup key")
+		zapLog.Fatal("Rabbitmq configuration requires a dialup key")
 	}
 
 	rabbitMQ, err := mq.NewRabbitMQ(mqUri)
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+		zapLog.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer rabbitMQ.Close()
 
-	repo, err := repository.NewMinIORepo(endpoint, accessKey, secretKey, bucketName)
+	// Initialize MinIO Repo with secure=false (TODO: make configurable)
+	repo, err := storage.NewMinIORepo(endpoint, accessKey, secretKey, bucketName, false)
 	if err != nil {
-		log.Fatalf("Failed to initialize MinIO Repository: %v", err)
+		zapLog.Fatal("Failed to initialize MinIO Repository", zap.Error(err))
 	}
-	log.Printf("Successfully connected to MinIO endpoint: %s", endpoint)
+	zapLog.Info("Successfully connected to MinIO endpoint", zap.String("endpoint", endpoint))
 
-	svc := app.NewUploadService(repo, bucketName, rabbitMQ)
+	svc := app.NewUploadService(repo, bucketName, rabbitMQ, l)
 
-	handler := api.NewHandler(svc)
+	handler := api.NewHandler(svc, l)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /upload", handler.UploadFileHandler) 
+	mux.HandleFunc("POST /upload", handler.UploadFileHandler)
 
 	listenAddr := ":" + port
-	log.Printf("Upload Service starting on port %s...", port)
-	
+	zapLog.Info("Upload Service starting...", zap.String("port", port))
+
 	if err := http.ListenAndServe(listenAddr, mux); err != nil {
-		log.Fatalf("Server failed: %v", err)
+		zapLog.Fatal("Server failed", zap.Error(err))
 	}
 }
