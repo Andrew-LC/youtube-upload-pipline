@@ -1,12 +1,12 @@
-package repository
+package storage
 
 import (
 	"io"
 	"context"
-	"yup/Andrew-LC/libs/models"
+	models "github.com/Andrew-LC/libs/models"
 )
 
-type UploadRepository interface {
+type Storage interface {
 	UploadFile(ctx context.Context, bucketName, objectName string, reader io.Reader, size int64, contentType string) (models.FileMetaData, error)
 	GetVideoObject(ctx context.Context, bucketName string, objectName string) (models.VideoObjectData, error)
 }

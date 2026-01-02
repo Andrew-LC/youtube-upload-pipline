@@ -1,4 +1,4 @@
-module github.com/Andrew-LC/libs/mq
+module yup/Andrew-LC/youtube-upload-pipeline/libs/mq
 
 go 1.24.0
 

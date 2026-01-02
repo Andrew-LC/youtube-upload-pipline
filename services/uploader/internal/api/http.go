@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Andrew-LC/libs/logger"
+	"yup/Andrew-LC/libs/logger"
 	"github.com/Andrew-LC/uploader/internal/app"
 	"go.uber.org/zap"
 )

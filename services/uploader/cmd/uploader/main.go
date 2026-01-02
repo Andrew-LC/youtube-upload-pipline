@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Andrew-LC/libs/logger"
-	"github.com/Andrew-LC/libs/mq"
-	"github.com/Andrew-LC/libs/storage"
+	"yup/Andrew-LC/libs/logger"
+	"yup/Andrew-LC/libs/mq"
+	"yup/Andrew-LC/libs/storage"
 	"github.com/Andrew-LC/uploader/internal/api"
 	"github.com/Andrew-LC/uploader/internal/app"
 	"go.uber.org/zap"
@@ -58,7 +58,6 @@ func main() {
 	}
 	defer rabbitMQ.Close()
 
-	// Initialize MinIO Repo with secure=false (TODO: make configurable)
 	repo, err := storage.NewMinIORepo(endpoint, accessKey, secretKey, bucketName, false)
 	if err != nil {
 		zapLog.Fatal("Failed to initialize MinIO Repository", zap.Error(err))

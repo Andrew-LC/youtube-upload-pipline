@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/Andrew-LC/libs/models"
+	"yup/Andrew-LC/libs/models"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -60,5 +60,34 @@ func (r *MinIORepo) UploadFile(ctx context.Context, bucketName, objectName strin
 		Bucket:   bucketName,
 		FileSize: info.Size,
 		URL:      url,
+	}, nil
+}
+
+
+func (r *MinIORepo) GetVideoObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+) (models.VideoObjectData, error) {
+
+	obj, err := r.Client.GetObject(
+		ctx,
+		bucketName,
+		objectName,
+		minio.GetObjectOptions{},
+	)
+	if err != nil {
+		return models.VideoObjectData{}, fmt.Errorf("failed to get object: %w", err)
+	}
+
+	info, err := obj.Stat()
+	if err != nil {
+		_ = obj.Close()
+		return models.VideoObjectData{}, fmt.Errorf("failed to stat object: %w", err)
+	}
+
+	return models.VideoObjectData{
+		Object: obj,
+		Info:   info,
 	}, nil
 }

@@ -1,0 +1,11 @@
+
+
+* TRANSCODER SERVICE:
++ Should recieve a uploaded message
++ use that info to get the video object and use ffmeg to transcode
++ On successful transcoding we will have (480p/720/1080p) and return:
+    #+BEGIN_SRC golang
+    type TranscodedResult struct {
+        
+    }
+#+END_SRC

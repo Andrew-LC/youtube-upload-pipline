@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Andrew-LC/libs/logger"
-	"github.com/Andrew-LC/libs/models"
-	"github.com/Andrew-LC/libs/mq"
+	"yup/Andrew-LC/libs/logger"
+	"yup/Andrew-LC/libs/models"
+	"yup/Andrew-LC/libs/mq"
 	"github.com/Andrew-LC/uploader/internal/repository"
 	"go.uber.org/zap"
 )

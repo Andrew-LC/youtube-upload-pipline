@@ -2,6 +2,6 @@ module github.com/Andrew-LC/uploader
 
 go 1.24.0
 
-require github.com/google/uuid v1.6.0
+require go.uber.org/zap v1.27.1
 
-require github.com/rabbitmq/amqp091-go v1.10.0 // indirect
+require go.uber.org/multierr v1.10.0 // indirect

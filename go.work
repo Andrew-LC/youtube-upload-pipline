@@ -1,14 +1,12 @@
 go 1.24.0
 
-use (
-	./services/api-gateway
-	./services/uploader
-	./services/metadata
-	./services/transcoder
-	./services/playback
+toolchain go1.24.11
 
-	./libs/storage
-	./libs/mq
-	./libs/models
+use (
 	./libs/logger
+	./libs/models
+	./libs/mq
+	//./services/api-gateway
+	./services/transcoder
+	./services/uploader
 )
