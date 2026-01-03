@@ -3,7 +3,7 @@ package storage
 import (
 	"io"
 	"context"
-	models "github.com/Andrew-LC/libs/models"
+	"yup/Andrew-LC/libs/models"
 )
 
 type Storage interface {

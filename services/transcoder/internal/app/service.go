@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
-	"github.com/Andrew-LC/transcoder/internal/ffmpeg"
-	"github.com/Andrew-LC/transcoder/internal/storage"
+	"yup/Andrew-LC/transcoder/internal/ffmpeg"
+	"yup/Andrew-LC/transcoder/internal/storage"
 )
 
 type TranscodingService {
